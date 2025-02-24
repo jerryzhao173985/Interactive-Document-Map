@@ -50,7 +50,8 @@
       top: 50px;    /* offset from top */
       width: 600px; /* control width so it doesn't push into the info panel */
       max-width: 90%;
-      background-color: rgba(0,0,0,0.4);
+      /* Remove or set transparent so there's no gray overlay: */
+      background-color: transparent /* rgba(0,0,0,0.4); */
     }
     .modal-content {
       background-color: #fefefe;
@@ -59,8 +60,9 @@
       border: 1px solid #888;
       width: 100%;
       box-sizing: border-box;
-      position: relative;
-      top: 50px;
+      /* Remove position offsets so it sits at the top of the .modal: */
+      position: static; /* relative; */
+      top: auto; /* 50px; */
     }
     .close {
       color: #aaa;
