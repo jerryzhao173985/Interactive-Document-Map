@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Document Map</title>
+  <!-- Load D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    header { margin-bottom: 10px; }
+    #controls { margin-bottom: 20px; }
+    #controls label, #controls select, #controls input, #controls button { margin-right: 10px; }
+
+    /* Container that holds the graph + the info panel side-by-side */
+    .graph-container {
+      display: flex; /* put svg and info panel side by side */
+      gap: 20px;     /* space between them */
+      align-items: flex-start;
+    }
+
+    /* Keep your existing svg styling but remove the border if you want. */
+    svg {
+      border: 1px solid #ccc;
+      flex-shrink: 0; /* prevent the svg from shrinking */
+    }
+
+    .link { stroke: #999; stroke-opacity: 0.6; }
+    .node { stroke: #fff; stroke-width: 1.5px; }
+    text { font-size: 10px; pointer-events: none; }
+
+    .tooltip {
+      position: absolute;
+      text-align: left;
+      padding: 6px;
+      font: 12px sans-serif;
+      background: lightsteelblue;
+      border: 0px;
+      border-radius: 8px;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    /* Modal styles */
+    .modal {
+      /* Instead of fixed, make it absolute so it doesn't overlap the new info panel too much. */
+      display: none;
+      position: absolute;
+      z-index: 1000;
+      left: 50px;   /* offset from left so it stays within the svg area */
+      top: 50px;    /* offset from top */
+      width: 600px; /* control width so it doesn't push into the info panel */
+      max-width: 90%;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 100%;
+      box-sizing: border-box;
+      position: relative;
+      top: 50px;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .close:hover, .close:focus { color: black; text-decoration: none; cursor: pointer; }
+
+    .resources { margin-top: 20px; }
+
+    /* New info panel on the right side */
+    #infoPanel {
+      width: 250px;
+      min-width: 200px;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    #infoPanel h2 {
+      margin-top: 0;
+    }
+    #info {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Interactive Document Map</h1>
+    <div id="controls">
+      <button id="reloadBtn">Reload Data</button>
+      <label for="testTypeFilter">Test Type:</label>
+      <select id="testTypeFilter">
+        <option value="">All</option>
+      </select>
+      <label for="subTypeFilter">Sub Type:</label>
+      <select id="subTypeFilter">
+        <option value="">All</option>
+      </select>
+      <label for="searchInput">Search:</label>
+      <input type="text" id="searchInput" placeholder="Document name">
+      <button id="saveSearchBtn">Save Search</button>
+    </div>
+  </header>
+  
+  <!-- Container that holds the SVG (left) and the info panel (right) -->
+  <div class="graph-container">
+    <!-- The SVG for your D3 graph -->
+    <div style="position: relative;">
+      <svg width="800" height="600"></svg>
+      <!-- Modal for document details (unchanged, just placed here) -->
+      <div id="detailModal" class="modal">
+        <div class="modal-content">
+          <span class="close" id="modalClose">&times;</span>
+          <h2 id="modalTitle"></h2>
+          <pre id="modalDetails"></pre>
+          <p id="modalFiles"></p>
+          <p id="modalLinks"></p>
+        </div>
+      </div>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <!-- New info panel on the right side -->
+    <div id="infoPanel">
+      <h2>Currently Selected</h2>
+      <div id="info">No document selected.</div>
+    </div>
+  </div>
+
+  <div class="resources">
+    <h2>Additional Resources</h2>
+    <ul>
+      <li><a href="https://neo4j.com/" target="_blank">Neo4j Graph Database</a></li>
+      <li><a href="https://d3js.org/" target="_blank">D3.js Visualization Library</a></li>
+      <li><a href="https://expressjs.com/" target="_blank">Express.js Framework</a></li>
+      <li><a href="https://plotly.com/python/network-graphs/" target="_blank">Plotly Network Graphs</a></li>
+      <li><a href="https://sharepoint.microsoft.com/" target="_blank">Microsoft SharePoint</a></li>
+    </ul>
+  </div>
+  
+  <script>
+    let allData = [];
+    let allRules = {};
+
+    // Load saved search query from localStorage.
+    const savedSearch = localStorage.getItem('savedSearch') || '';
+    document.getElementById('searchInput').value = savedSearch;
+    
+    // Fetch documents and rules.
+    function loadData() {
+      Promise.all([
+        fetch('/api/documents').then(res => res.json()),
+        fetch('/api/rules').then(res => res.json())
+      ]).then(([docData, ruleData]) => {
+        allData = docData;
+        allRules = ruleData;
+        populateFilters(allData);
+        updateGraph(applyFilters(allData));
+      }).catch(err => console.error("Error loading data:", err));
+    }
+    
+    // Populate test type filter.
+    function populateFilters(data) {
+      const testTypeSelect = document.getElementById('testTypeFilter');
+      testTypeSelect.innerHTML = '<option value="">All</option>';
+      const testTypes = Array.from(new Set(data.map(d => d.testType)));
+      testTypes.forEach(tt => {
+        const option = document.createElement('option');
+        option.value = tt;
+        option.text = tt;
+        testTypeSelect.appendChild(option);
+      });
+      updateSubTypeOptions();
+    }
+    
+    // Update sub type filter based on selected test type.
+    function updateSubTypeOptions() {
+      const testTypeValue = document.getElementById('testTypeFilter').value;
+      const subTypeSelect = document.getElementById('subTypeFilter');
+      subTypeSelect.innerHTML = '<option value="">All</option>';
+      const filtered = testTypeValue ? allData.filter(d => d.testType === testTypeValue) : allData;
+      const subTypes = Array.from(new Set(filtered.map(d => d.subType)));
+      subTypes.forEach(st => {
+        const option = document.createElement('option');
+        option.value = st;
+        option.text = st;
+        subTypeSelect.appendChild(option);
+      });
+    }
+    
+    // Apply filtering and search criteria.
+    function applyFilters(data) {
+      const testTypeValue = document.getElementById('testTypeFilter').value;
+      const subTypeValue = document.getElementById('subTypeFilter').value;
+      const searchValue = document.getElementById('searchInput').value.toLowerCase();
+      return data.filter(d => {
+        let matches = true;
+        if (testTypeValue) matches = matches && d.testType === testTypeValue;
+        if (subTypeValue) matches = matches && d.subType === subTypeValue;
+        if (searchValue) matches = matches && d.name.toLowerCase().includes(searchValue);
+        return matches;
+      });
+    }
+    
+    // D3 setup: create reference to the SVG and set up for zoom.
+    const svg = d3.select("svg");
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+    
+    function updateGraph(data) {
+      // Clear any existing elements from the SVG.
+      svg.selectAll("*").remove();
+
+      // Create a container 'g' that will be zoomed/panned as a group.
+      const container = svg.append("g")
+        .attr("class", "container");
+      
+      // Prepare node data
+      const nodes = data.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        testType: doc.testType,
+        subType: doc.subType,
+        fileType: doc.fileType,
+        externalLinks: doc.externalLinks,
+        details: doc.details
+      }));
+      
+      // Prepare link data
+      let links = [];
+      data.forEach(doc => {
+        if (doc.connections && doc.connections.length > 0) {
+          doc.connections.forEach(targetId => {
+            if (nodes.find(n => n.id === targetId)) {
+              links.push({ source: doc.id, target: targetId });
+            }
+          });
+        }
+      });
+      
+      // Setup the force simulation
+      const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(120))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+      
+      // Draw links
+      const link = container.append("g")
+          .attr("class", "links")
+        .selectAll("line")
+        .data(links)
+        .enter().append("line")
+          .attr("class", "link")
+          .attr("stroke-dasharray", d => {
+            const rule = allRules.rules.find(r => 
+              r.testType === d.source.testType || r.testType === d.target.testType
+            );
+            return rule && rule.display.edgeStyle === "dashed" ? "5,5" : "0";
+          });
+      
+      // Draw nodes
+      const node = container.append("g")
+          .attr("class", "nodes")
+        .selectAll("circle")
+        .data(nodes)
+        .enter().append("circle")
+          .attr("r", 10)
+          .attr("class", "node")
+          .attr("fill", d => {
+            const rule = allRules.rules.find(r => r.testType === d.testType);
+            if (rule && rule.display.nodeColors[d.subType]) {
+              return rule.display.nodeColors[d.subType];
+            }
+            return "#3498db";
+          })
+          // Hover tooltip
+          .on("mouseover", (event, d) => {
+            d3.select("#tooltip")
+              .style("opacity", 1)
+              .html(`
+                <strong>${d.name}</strong><br>
+                Test: ${d.testType}<br>
+                Sub Type: ${d.subType}<br>
+                File Type: ${d.fileType || 'N/A'}<br>
+                ${d.details}<br>
+                ${d.externalLinks ? "Links: " + d.externalLinks.join(", ") : ""}
+              `)
+              .style("left", (event.pageX + 10) + "px")
+              .style("top", (event.pageY - 28) + "px");
+          })
+          .on("mouseout", () => {
+            d3.select("#tooltip").style("opacity", 0);
+          })
+          // Click -> show modal AND update info panel
+          .on("click", (event, d) => {
+            showModal(d);
+            updateInfoDiv(d);  // <-- new function to fill the #info div
+          })
+          .call(d3.drag()
+              .on("start", dragstarted)
+              .on("drag", dragged)
+              .on("end", dragended));
+      
+      // Draw labels
+      const label = container.append("g")
+          .attr("class", "labels")
+        .selectAll("text")
+        .data(nodes)
+        .enter().append("text")
+          .attr("dy", -15)
+          .text(d => d.name);
+      
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+        node
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y);
+        label
+          .attr("x", d => d.x)
+          .attr("y", d => d.y);
+      });
+      
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+
+      // Enable zoom & pan on the SVG
+      svg.call(
+        d3.zoom()
+          .extent([[0, 0], [width, height]])
+          .scaleExtent([0.5, 5])
+          .on("zoom", (event) => {
+            container.attr("transform", event.transform);
+          })
+      );
+    }
+
+    // NEW: Update the #info div on the right with the selected node’s data
+    function updateInfoDiv(d) {
+      const infoDiv = document.getElementById('info');
+      infoDiv.innerHTML = `
+        <h3>${d.name}</h3>
+        <p><strong>Test Type:</strong> ${d.testType}</p>
+        <p><strong>Sub Type:</strong> ${d.subType}</p>
+        <p><strong>File Type:</strong> ${d.fileType || 'N/A'}</p>
+        <p><strong>Details:</strong> ${d.details}</p>
+        ${
+          d.externalLinks
+            ? `<p><strong>External Links:</strong> 
+               ${d.externalLinks.map(link => `<a href="${link}" target="_blank">${link}</a>`).join(', ')}
+               </p>`
+            : ''
+        }
+      `;
+    }
+    
+    // Modal functionality for showing detailed document information (unchanged).
+    function showModal(nodeData) {
+      const modal = document.getElementById("detailModal");
+      document.getElementById("modalTitle").innerText = nodeData.name;
+      document.getElementById("modalDetails").innerText =
+        `Test Type: ${nodeData.testType}\nSub Type: ${nodeData.subType}\nDetails: ${nodeData.details}`;
+      document.getElementById("modalFiles").innerText =
+        `File Type: ${nodeData.fileType || 'N/A'}`;
+      document.getElementById("modalLinks").innerHTML =
+        nodeData.externalLinks
+          ? `External Links: ${nodeData.externalLinks.map(link => 
+             `<a href="${link}" target="_blank">${link}</a>`).join(", ")}`
+          : "";
+      modal.style.display = "block";
+    }
+
+    // Close modal when user clicks the X or outside the modal
+    document.getElementById("modalClose").onclick = function() {
+      document.getElementById("detailModal").style.display = "none";
+    }
+    window.onclick = function(event) {
+      const modal = document.getElementById("detailModal");
+      // If the user clicks anywhere outside the modal content, close it.
+      if (event.target === modal) {
+        modal.style.display = "none";
+      }
+    }
+    
+    // Event listeners for controls.
+    document.getElementById('reloadBtn').addEventListener('click', loadData);
+    document.getElementById('testTypeFilter').addEventListener('change', () => {
+      updateSubTypeOptions();
+      updateGraph(applyFilters(allData));
+    });
+    document.getElementById('subTypeFilter').addEventListener('change', () => {
+      updateGraph(applyFilters(allData));
+    });
+    document.getElementById('searchInput').addEventListener('input', () => {
+      updateGraph(applyFilters(allData));
+    });
+    document.getElementById('saveSearchBtn').addEventListener('click', () => {
+      const searchValue = document.getElementById('searchInput').value;
+      localStorage.setItem('savedSearch', searchValue);
+      alert('Search saved!');
+    });
+    
+    // Initial load.
+    loadData();
+  </script>
+</body>
+</html>

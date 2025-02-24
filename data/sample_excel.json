@@ -1,0 +1,12 @@
+[
+  {
+    "id": "doc_excel_1",
+    "name": "Soil Analysis Excel Report",
+    "testType": "Excel Analysis",
+    "subType": "Nutrient Data",
+    "fileType": "excel",
+    "externalLinks": ["https://example.com/excel_report"],
+    "details": "Contains nutrient analysis and moisture content data from soil samples.",
+    "connections": ["doc1", "doc4"]
+  }
+]

@@ -1,0 +1,139 @@
+{
+  "default": {
+    "documents": []
+  },
+  "documents": [
+    {
+      "id": "doc1",
+      "name": "Core Sample Report 1",
+      "testType": "CRS",
+      "subType": "High",
+      "fileType": "pdf",
+      "externalLinks": [
+        "https://example.com/core1"
+      ],
+      "details": "Core recovery of 95% recorded at Site A.",
+      "connections": [
+        "doc2",
+        "doc4"
+      ]
+    },
+    {
+      "id": "doc2",
+      "name": "Core Sample Report 2",
+      "testType": "CRS",
+      "subType": "Moderate",
+      "fileType": "pdf",
+      "externalLinks": [
+        "https://example.com/core2"
+      ],
+      "details": "Core recovery of 80% recorded at Site A.",
+      "connections": [
+        "doc1",
+        "doc3"
+      ]
+    },
+    {
+      "id": "doc3",
+      "name": "Core Sample Report 3",
+      "testType": "CRS",
+      "subType": "Low",
+      "fileType": "pdf",
+      "externalLinks": [
+        "https://example.com/core3"
+      ],
+      "details": "Core recovery of 65% recorded at Site B.",
+      "connections": [
+        "doc2",
+        "doc5"
+      ]
+    },
+    {
+      "id": "doc4",
+      "name": "Standard Penetration Test Report 1",
+      "testType": "SPT",
+      "subType": "High",
+      "fileType": "pdf",
+      "externalLinks": [
+        "https://example.com/spt1"
+      ],
+      "details": "SPT shows high soil resistance at Site A.",
+      "connections": [
+        "doc1",
+        "doc6"
+      ]
+    },
+    {
+      "id": "doc5",
+      "name": "Standard Penetration Test Report 2",
+      "testType": "SPT",
+      "subType": "Low",
+      "fileType": "pdf",
+      "externalLinks": [
+        "https://example.com/spt2"
+      ],
+      "details": "SPT indicates low resistance at Site B.",
+      "connections": [
+        "doc3"
+      ]
+    },
+    {
+      "id": "doc6",
+      "name": "pH Measurement Report 1",
+      "testType": "pH",
+      "subType": "Neutral",
+      "fileType": "pdf",
+      "externalLinks": [
+        "https://example.com/ph1"
+      ],
+      "details": "pH value of 7.0 at Site C.",
+      "connections": [
+        "doc4",
+        "doc7"
+      ]
+    },
+    {
+      "id": "doc7",
+      "name": "pH Measurement Report 2",
+      "testType": "pH",
+      "subType": "Acidic",
+      "fileType": "pdf",
+      "externalLinks": [
+        "https://example.com/ph2"
+      ],
+      "details": "pH value of 5.5 at Site C.",
+      "connections": [
+        "doc6"
+      ]
+    },
+    {
+      "id": "doc_excel_1",
+      "name": "Soil Analysis Excel Report",
+      "testType": "Excel Analysis",
+      "subType": "Nutrient Data",
+      "fileType": "excel",
+      "externalLinks": [
+        "https://example.com/excel_report"
+      ],
+      "details": "Contains nutrient analysis and moisture content data from soil samples.",
+      "connections": [
+        "doc1",
+        "doc4"
+      ]
+    },
+    {
+      "id": "doc_word_1",
+      "name": "Soil Test Summary Report",
+      "testType": "Word Summary",
+      "subType": "Overview",
+      "fileType": "word",
+      "externalLinks": [
+        "https://example.com/word_summary"
+      ],
+      "details": "Detailed narrative summary of soil test results including field observations.",
+      "connections": [
+        "doc2"
+      ]
+    }
+  ]
+}

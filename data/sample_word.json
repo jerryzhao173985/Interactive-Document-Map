@@ -1,0 +1,12 @@
+[
+  {
+    "id": "doc_word_1",
+    "name": "Soil Test Summary Report",
+    "testType": "Word Summary",
+    "subType": "Overview",
+    "fileType": "word",
+    "externalLinks": ["https://example.com/word_summary"],
+    "details": "Detailed narrative summary of soil test results including field observations.",
+    "connections": ["doc2"]
+  }
+]

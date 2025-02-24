@@ -1,0 +1,64 @@
+{
+  "rules": [
+    {
+      "testType": "CRS",
+      "display": {
+        "nodeColors": {
+          "High": "#2ecc71",
+          "Moderate": "#f1c40f",
+          "Low": "#e74c3c"
+        },
+        "edgeStyle": "dashed"
+      }
+    },
+    {
+      "testType": "SPT",
+      "display": {
+        "nodeColors": {
+          "High": "#2ecc71",
+          "Moderate": "#f1c40f",
+          "Low": "#e74c3c"
+        },
+        "edgeStyle": "dashed"
+      }
+    },
+    {
+      "testType": "pH",
+      "display": {
+        "nodeColors": {
+          "Acidic": "#e74c3c",
+          "Neutral": "#95a5a6",
+          "Alkaline": "#3498db"
+        },
+        "edgeStyle": "solid"
+      }
+    },
+    {
+      "testType": "Excel Analysis",
+      "display": {
+        "nodeColors": {
+          "Nutrient Data": "#1abc9c"
+        },
+        "edgeStyle": "solid"
+      }
+    },
+    {
+      "testType": "Word Summary",
+      "display": {
+        "nodeColors": {
+          "Overview": "#9b59b6"
+        },
+        "edgeStyle": "solid"
+      }
+    },
+    {
+      "testType": "Other",
+      "display": {
+        "nodeColors": {
+          "General": "#34495e"
+        },
+        "edgeStyle": "solid"
+      }
+    }
+  ]
+}
